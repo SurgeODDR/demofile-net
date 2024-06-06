@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using DemoFile;
 using DemoFile.Sdk;
+using Serilog;
 
 public class PlayerEvents
 {
@@ -18,10 +19,7 @@ public class PlayerEvents
             var victimTeam = TeamNumberToString(e.Player?.CSTeamNum);
 
             // Log the teams for debugging
-            Console.WriteLine($"PlayerDeath Event: Attacker={e.Attacker?.PlayerName}, AttackerTeam={attackerTeam}, Victim={e.Player?.PlayerName}, VictimTeam={victimTeam}");
-
-            // Print properties of PlayerPawn for debugging
-            PrintPlayerPawnProperties(e.Player?.PlayerPawn);
+            Log.Information("PlayerDeath Event: Attacker={Attacker}, AttackerTeam={AttackerTeam}, Victim={Victim}, VictimTeam={VictimTeam}", e.Attacker?.PlayerName, attackerTeam, e.Player?.PlayerName, victimTeam);
 
             events.Add(new
             {
@@ -53,10 +51,7 @@ public class PlayerEvents
             var victimTeam = TeamNumberToString(e.Player?.CSTeamNum);
 
             // Log the teams for debugging
-            Console.WriteLine($"PlayerHurt Event: Attacker={e.Attacker?.PlayerName}, AttackerTeam={attackerTeam}, Victim={e.Player?.PlayerName}, VictimTeam={victimTeam}");
-
-            // Print properties of PlayerPawn for debugging
-            PrintPlayerPawnProperties(e.Player?.PlayerPawn);
+            Log.Information("PlayerHurt Event: Attacker={Attacker}, AttackerTeam={AttackerTeam}, Victim={Victim}, VictimTeam={VictimTeam}", e.Attacker?.PlayerName, attackerTeam, e.Player?.PlayerName, victimTeam);
 
             events.Add(new
             {
@@ -88,7 +83,7 @@ public class PlayerEvents
             var victimTeam = TeamNumberToString(e.Player?.CSTeamNum);
 
             // Log the teams for debugging
-            Console.WriteLine($"PlayerBlind Event: Attacker={e.Attacker?.PlayerName}, AttackerTeam={attackerTeam}, Victim={e.Player?.PlayerName}, VictimTeam={victimTeam}");
+            Log.Information("PlayerBlind Event: Attacker={Attacker}, AttackerTeam={AttackerTeam}, Victim={Victim}, VictimTeam={VictimTeam}", e.Attacker?.PlayerName, attackerTeam, e.Player?.PlayerName, victimTeam);
 
             events.Add(new
             {
@@ -130,22 +125,4 @@ public class PlayerEvents
         CSTeamNumber.CounterTerrorist => "Counter-Terrorist",
         _ => "Unknown",
     };
-
-    private void PrintPlayerPawnProperties(object playerPawn)
-    {
-        if (playerPawn == null)
-        {
-            Console.WriteLine("PlayerPawn is null.");
-            return;
-        }
-
-        Type type = playerPawn.GetType();
-        PropertyInfo[] properties = type.GetProperties();
-
-        Console.WriteLine($"Properties of {type.Name}:");
-        foreach (var property in properties)
-        {
-            Console.WriteLine($"{property.Name} ({property.PropertyType.Name})");
-        }
-    }
 }

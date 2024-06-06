@@ -1,4 +1,4 @@
-// BioDataParser.cs
+// DemoParser.cs
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -27,13 +27,15 @@ namespace cooper_ai.Events
         private readonly BioData _bioData;
         private readonly List<object> _events;
         private readonly Movement _movement;
+        private readonly string _outputDirectory;
 
-        public BioDataParser()
+        public BioDataParser(string outputDirectory)
         {
             _events = new List<object>();
             _demoParser = new DemoParser();
             _bioData = new BioData();
-            _movement = new Movement(_demoParser);
+            _movement = new Movement(_demoParser, Path.Combine(outputDirectory, "movement.json"), Path.Combine(outputDirectory, "mapname.txt"));
+            _outputDirectory = outputDirectory;
 
             // Initialize event handlers
             var playerEvents = new PlayerEvents(_demoParser, _events);
@@ -50,10 +52,22 @@ namespace cooper_ai.Events
 
         public async Task ParseDemoAsync(string path)
         {
-            await using var stream = File.OpenRead(path);
-            await _demoParser.ReadAllAsync(stream);
-            await SaveBioDataToFileAsync();
-            await _movement.SaveMovementDataAsync(); // Save movement data
+            try
+            {
+                await using var stream = File.OpenRead(path);
+                await _demoParser.ReadAllAsync(stream);
+                await SaveBioDataToFileAsync();
+                await _movement.SaveMovementDataAsync(); // Save movement data
+            }
+            catch (Exception ex) when (ex.Message.Contains("Attempted to create unknown entity"))
+            {
+                Log.Warning("Encountered unknown entity while parsing the demo file: {Path}. Continuing with parsing.", path);
+                Log.Warning(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "An error occurred while parsing the demo file: {Path}", path);
+            }
         }
 
         private async Task SaveBioDataToFileAsync()
@@ -77,8 +91,9 @@ namespace cooper_ai.Events
 
             // Serialize BioData and Events
             var json = JsonConvert.SerializeObject(output, jsonSettings);
-            await File.WriteAllTextAsync("bio_data_output.json", json);
-            Log.Information("Finished processing and output saved to bio_data_output.json");
+            var outputFilePath = Path.Combine(_outputDirectory, "bio_data_output.json");
+            await File.WriteAllTextAsync(outputFilePath, json);
+            Log.Information("Finished processing and output saved to {OutputFilePath}", outputFilePath);
         }
     }
 }

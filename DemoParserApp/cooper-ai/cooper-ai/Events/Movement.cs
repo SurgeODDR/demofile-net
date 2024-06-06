@@ -1,3 +1,4 @@
+// Movement.cs
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,45 +38,17 @@ public class Movement
 
     private void OnLastPlaceNameChanged(CCSPlayerPawn playerPawn, string oldPlace, string newPlace)
     {
-        if (newPlace != null && playerPawn.Controller != null)
+        try
         {
-            var movementEvent = new MovementEvent
+            if (newPlace != null && playerPawn.Controller != null)
             {
-                PlayerName = playerPawn.Controller.PlayerName,
-                PlayerId = playerPawn.Controller.SteamID,
-                Timestamp = _demoParser.CurrentGameTime.Value,
-                LastPlaceName = oldPlace, // Include the old place name
-                NewPlaceName = newPlace, // Include the new place name
-                PlayerPosition = playerPawn.Origin,
-                Health = playerPawn.Health,
-                Armor = playerPawn.ArmorValue, // Using ArmorValue property
-                Weapon = playerPawn.ActiveWeapon?.GetType().Name, // Using the type name as a placeholder for WeaponName
-                Team = playerPawn.Controller.CSTeamNum.ToString()
-            };
-
-            _movementEvents.Add(movementEvent);
-            Log.Information("Player {PlayerName} moved from {LastPlaceName} to {NewPlaceName} at {Timestamp}", 
-                movementEvent.PlayerName, 
-                movementEvent.LastPlaceName, 
-                movementEvent.NewPlaceName, 
-                movementEvent.Timestamp);
-        }
-    }
-
-    private void OnExitBuyzone(Source1ExitBuyzoneEvent e)
-    {
-        if (_roundStarted && e.Player != null && !_playersExitedBuyzone.Contains(e.Player.SteamID))
-        {
-            _playersExitedBuyzone.Add(e.Player.SteamID);
-
-            var playerPawn = e.Player.PlayerPawn;
-            if (playerPawn != null)
-            {
-                var inventoryLogEvent = new InventoryLogEvent
+                var movementEvent = new MovementEvent
                 {
-                    PlayerName = e.Player.PlayerName,
-                    PlayerId = e.Player.SteamID,
+                    PlayerName = playerPawn.Controller.PlayerName,
+                    PlayerId = playerPawn.Controller.SteamID,
                     Timestamp = _demoParser.CurrentGameTime.Value,
+                    LastPlaceName = oldPlace, // Include the old place name
+                    NewPlaceName = newPlace, // Include the new place name
                     PlayerPosition = playerPawn.Origin,
                     Health = playerPawn.Health,
                     Armor = playerPawn.ArmorValue, // Using ArmorValue property
@@ -83,68 +56,138 @@ public class Movement
                     Team = playerPawn.Controller.CSTeamNum.ToString()
                 };
 
-                _movementEvents.Add(inventoryLogEvent);
-                Log.Information("Player {PlayerName} exited buyzone at {Timestamp}", 
-                    inventoryLogEvent.PlayerName, 
-                    inventoryLogEvent.Timestamp);
+                _movementEvents.Add(movementEvent);
+                Log.Information("Player {PlayerName} moved from {LastPlaceName} to {NewPlaceName} at {Timestamp}", 
+                    movementEvent.PlayerName, 
+                    movementEvent.LastPlaceName, 
+                    movementEvent.NewPlaceName, 
+                    movementEvent.Timestamp);
             }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in OnLastPlaceNameChanged for player {PlayerName}", playerPawn.Controller?.PlayerName);
+        }
+    }
+
+    private void OnExitBuyzone(Source1ExitBuyzoneEvent e)
+    {
+        try
+        {
+            if (_roundStarted && e.Player != null && !_playersExitedBuyzone.Contains(e.Player.SteamID))
+            {
+                _playersExitedBuyzone.Add(e.Player.SteamID);
+
+                var playerPawn = e.Player.PlayerPawn;
+                if (playerPawn != null)
+                {
+                    var inventoryLogEvent = new InventoryLogEvent
+                    {
+                        PlayerName = e.Player.PlayerName,
+                        PlayerId = e.Player.SteamID,
+                        Timestamp = _demoParser.CurrentGameTime.Value,
+                        PlayerPosition = playerPawn.Origin,
+                        Health = playerPawn.Health,
+                        Armor = playerPawn.ArmorValue, // Using ArmorValue property
+                        Weapon = playerPawn.ActiveWeapon?.GetType().Name, // Using the type name as a placeholder for WeaponName
+                        Team = playerPawn.Controller.CSTeamNum.ToString()
+                    };
+
+                    _movementEvents.Add(inventoryLogEvent);
+                    Log.Information("Player {PlayerName} exited buyzone at {Timestamp}", 
+                        inventoryLogEvent.PlayerName, 
+                        inventoryLogEvent.Timestamp);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in OnExitBuyzone for player {PlayerName}", e.Player?.PlayerName);
         }
     }
 
     private void OnRoundStart(Source1RoundStartEvent e)
     {
-        _roundStarted = true;
-        _playersExitedBuyzone.Clear();
-        Log.Information("Round started at {Timestamp}", _demoParser.CurrentGameTime.Value);
-
-        var roundStartEvent = new RoundEvent
+        try
         {
-            EventType = "RoundStart",
-            Timestamp = _demoParser.CurrentGameTime.Value,
-            Timelimit = e.Timelimit,
-            Fraglimit = e.Fraglimit,
-            Objective = e.Objective
-        };
+            _roundStarted = true;
+            _playersExitedBuyzone.Clear();
+            Log.Information("Round started at {Timestamp}", _demoParser.CurrentGameTime.Value);
 
-        _movementEvents.Add(roundStartEvent);
-        Log.Information("RoundStart event added: {@RoundStartEvent}", roundStartEvent);
+            var roundStartEvent = new RoundEvent
+            {
+                EventType = "RoundStart",
+                Timestamp = _demoParser.CurrentGameTime.Value,
+                Timelimit = e.Timelimit,
+                Fraglimit = e.Fraglimit,
+                Objective = e.Objective
+            };
+
+            _movementEvents.Add(roundStartEvent);
+            Log.Information("RoundStart event added: {@RoundStartEvent}", roundStartEvent);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in OnRoundStart");
+        }
     }
 
     private void OnRoundEnd(Source1RoundEndEvent e)
     {
-        _roundStarted = false;
-        Log.Information("Round ended at {Timestamp}", _demoParser.CurrentGameTime.Value);
-
-        var roundEndEvent = new RoundEvent
+        try
         {
-            EventType = "RoundEnd",
-            Timestamp = _demoParser.CurrentGameTime.Value,
-            Winner = e.Winner.ToString(),
-            Reason = e.Reason.ToString(),
-            Message = e.Message,
-            Legacy = e.Legacy == 1,
-            PlayerCount = e.PlayerCount,
-            Nomusic = e.Nomusic == 1
-        };
+            _roundStarted = false;
+            Log.Information("Round ended at {Timestamp}", _demoParser.CurrentGameTime.Value);
 
-        _movementEvents.Add(roundEndEvent);
-        Log.Information("RoundEnd event added: {@RoundEndEvent}", roundEndEvent);
+            var roundEndEvent = new RoundEvent
+            {
+                EventType = "RoundEnd",
+                Timestamp = _demoParser.CurrentGameTime.Value,
+                Winner = e.Winner.ToString(),
+                Reason = e.Reason.ToString(),
+                Message = e.Message,
+                Legacy = e.Legacy == 1,
+                PlayerCount = e.PlayerCount,
+                Nomusic = e.Nomusic == 1
+            };
+
+            _movementEvents.Add(roundEndEvent);
+            Log.Information("RoundEnd event added: {@RoundEndEvent}", roundEndEvent);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error in OnRoundEnd");
+        }
     }
 
     public async Task SaveMovementDataAsync()
     {
-        var mapName = _demoParser.FileHeader.MapName; // Retrieve the map name correctly
-        await SaveMapNameAsync(mapName); // Save the map name to mapname.txt
+        try
+        {
+            var mapName = _demoParser.FileHeader.MapName; // Retrieve the map name correctly
+            await SaveMapNameAsync(mapName); // Save the map name to mapname.txt
 
-        var json = JsonConvert.SerializeObject(_movementEvents, Formatting.Indented);
-        await File.WriteAllTextAsync(_outputFilePath, json);
-        Log.Information("Movement data saved to {OutputFilePath}", _outputFilePath);
+            var json = JsonConvert.SerializeObject(_movementEvents, Formatting.Indented);
+            await File.WriteAllTextAsync(_outputFilePath, json);
+            Log.Information("Movement data saved to {OutputFilePath}", _outputFilePath);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error saving movement data");
+        }
     }
 
     private async Task SaveMapNameAsync(string mapName)
     {
-        await File.WriteAllTextAsync(_mapNameFilePath, mapName);
-        Log.Information("Map name saved to {MapNameFilePath}", _mapNameFilePath);
+        try
+        {
+            await File.WriteAllTextAsync(_mapNameFilePath, mapName);
+            Log.Information("Map name saved to {MapNameFilePath}", _mapNameFilePath);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Error saving map name");
+        }
     }
 
     private class MovementEvent
